@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 
+from memanto.app.utils.errors import AgentAlreadyExistsError
 from memanto.cli.client.sdk_client import SdkClient
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class MemantoSetup:
                 description=description,
             )
             logger.info("Created Memanto agent '%s'", agent_id)
-        except Exception:
+        except AgentAlreadyExistsError:
             logger.info("Memanto agent '%s' already exists, reusing", agent_id)
 
         self.client.activate_agent(agent_id, duration_hours=duration_hours)

@@ -191,7 +191,7 @@ def build_support_graph(
             content=(
                 "You are a helpful customer-support assistant. "
                 "Long-term facts about the current user may appear as a system "
-                "message below this one — respect those preferences. Be concise."
+                "message below this one; respect those preferences. Be concise."
             )
         )
         reply = await chat.ainvoke([system_prefix] + state["messages"])
@@ -228,6 +228,8 @@ def build_support_graph(
                     HumanMessage(content=str(last_user_msg.content)),
                 ]
             )
+        except openai.RateLimitError:
+            raise  # let RetryPolicy handle backoff and retry
         except Exception as e:
             logger.warning("extract_and_store: extraction failed: %s", e)
             return {}

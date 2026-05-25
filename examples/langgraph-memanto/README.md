@@ -2,15 +2,7 @@
 
 A runnable customer-support agent that uses **[Memanto](https://memanto.ai)** as its long-term, cross-thread memory layer for **[LangGraph](https://github.com/langchain-ai/langgraph)**. Memories survive a brand-new `thread_id`, a fresh checkpointer, and a different Python process.
 
-> **Key design:** `MemantoStore` is a real `langgraph.store.base.BaseStore` subclass — the official LangGraph long-term memory abstraction, drop-in alongside `InMemoryStore`, `PostgresStore`, and `RedisStore`.
-
-## Demo
-
-<!-- Drop the recorded GIF/MP4 here. Recommended: 30-second screen capture of
-     `python run_full_demo.py` showing Session 1 storing the peanut allergy
-     and Session 2 (new thread_id) recalling it without prior thread state. -->
-
-> _Demo GIF: see `assets/langgraph-memanto-demo.gif` (recorded from `python run_full_demo.py`)._
+> **Key design:** `MemantoStore` is a real `langgraph.store.base.BaseStore` subclass, the official LangGraph long-term memory abstraction, drop-in alongside `InMemoryStore`, `PostgresStore`, and `RedisStore`.
 
 ## Architecture
 
@@ -22,9 +14,9 @@ A runnable customer-support agent that uses **[Memanto](https://memanto.ai)** as
   'lineColor':'#94a3b8',
   'fontSize':'14px'
 }}}%%
-flowchart LR
+flowchart TB
     subgraph S1["Session 1 · thread_id = conv-1"]
-        direction TB
+        direction LR
         U1(["👤 Bob<br/>'I'm allergic to peanuts.<br/>Reach me by email only.'"]):::user
         U1 --> R1["🔍 recall_context"]:::recall
         R1 --> A1["🤖 respond"]:::respond
@@ -32,29 +24,26 @@ flowchart LR
     end
 
     subgraph S2["Session 2 · thread_id = conv-2 · FRESH thread"]
-        direction TB
+        direction LR
         U2(["👤 Bob<br/>'What snacks should<br/>I pack for a road trip?'"]):::user
         U2 --> R2["🔍 recall_context"]:::recall
-        R2 --> A2["🤖 respond<br/><i>skips peanuts</i>"]:::respond
+        R2 --> A2["🤖 respond<br/><i>skips peanuts ✓</i>"]:::respond
         A2 --> E2["📝 extract_and_store"]:::store
     end
 
-    subgraph LG["LangGraph runtime"]
+    subgraph INFRA["LangGraph runtime"]
         direction LR
-        CKPT[("🧠 InMemorySaver<br/><i>short-term<br/>thread state</i>")]:::ckpt
-        STORE[("💎 MemantoStore<br/><b>BaseStore</b><br/><i>long-term<br/>cross-thread memory</i>")]:::store2
+        STORE[("💎 MemantoStore<br/><b>BaseStore</b><br/><i>long-term · cross-thread</i>")]:::store2
+        CKPT[("🧠 InMemorySaver<br/><i>short-term · per thread_id</i>")]:::ckpt
     end
 
     subgraph MEM["Memanto · Moorcheh"]
-        direction TB
         DB[("🗄️ Typed semantic memory<br/>13 kinds · confidence · tags<br/>conflict detection")]:::db
     end
 
-    E1 -- "store.aput(('bob','memories'), ...)" --> STORE
-    R2 -- "store.asearch(('bob','memories'), query='snacks...')" --> STORE
-    STORE <--> DB
-    S1 -. "checkpoint" .-> CKPT
-    S2 -. "checkpoint" .-> CKPT
+    E1 == "aput(('bob','memories'), ...)" ==> STORE
+    STORE == "asearch → context injected" ==> R2
+    STORE <==> DB
 
     classDef user fill:#1e40af,stroke:#3b82f6,color:#dbeafe,stroke-width:2px
     classDef recall fill:#0e7490,stroke:#22d3ee,color:#cffafe,stroke-width:2px
@@ -80,8 +69,8 @@ They're not interchangeable. We use both, each for its proper job.
 
 ## What this demonstrates
 
-* **Cross-session recall.** Run session 1, kill the process, start session 2 with a *different* `thread_id` — the agent still remembers everything important about the user. The checkpointer is gone; the store remains.
-* **Official `BaseStore` integration point.** `MemantoStore` is a real `BaseStore` subclass. Nodes declare `*, store: BaseStore` and LangGraph injects the compiled store automatically — no Memanto-specific glue inside node code.
+* **Cross-session recall.** Run session 1, kill the process, start session 2 with a *different* `thread_id`; the agent still remembers everything important about the user. The checkpointer is gone; the store remains.
+* **Official `BaseStore` integration point.** `MemantoStore` is a real `BaseStore` subclass. Nodes declare `*, store: BaseStore` and LangGraph injects the compiled store automatically with no Memanto-specific glue inside node code.
 * **Typed semantic memory.** The extractor LLM picks from 13 Memanto memory categories (fact, preference, goal, decision, observation, …) so retrieval can filter by kind.
 * **Rate-limit resilience.** LangGraph's `RetryPolicy` is wired to LLM nodes (`max_attempts=5`, `initial_interval=32 s`) so transient OpenRouter 429s are transparently retried without crashing the graph.
 * **Conflict-aware long-term memory (bonus).** When a new memory contradicts an old one, Memanto's daily-summary pass flags it; the bonus script shows programmatic resolution.
@@ -90,7 +79,7 @@ They're not interchangeable. We use both, each for its proper job.
 
 * Python 3.10+
 * A [Moorcheh API key](https://console.moorcheh.ai/api-keys) (free tier: 100K ops/month)
-* An [OpenRouter API key](https://openrouter.ai/keys) (free tier available — same provider used by the CrewAI example)
+* An [OpenRouter API key](https://openrouter.ai/keys) (free tier available, same provider used by the CrewAI example)
 
 ## Setup
 
@@ -102,9 +91,22 @@ cp .env.example .env
 # Edit .env and add MOORCHEH_API_KEY and OPENROUTER_API_KEY
 ```
 
-## Step-by-step demo (proves persistence)
+## Interactive UI (Streamlit)
 
-This is the recommended flow for recording the 30-second demo:
+The easiest way to see cross-session recall in action:
+
+```bash
+streamlit run app.py
+```
+
+Opens a browser UI with:
+- **Session 1 tab**: chat with the agent; it extracts and stores facts in MemantoStore
+- **Session 2 tab**: a fresh `thread_id` with an empty checkpointer; the agent still recalls everything from Session 1
+- **Live memory panel**: shows every memory currently stored in Memanto for the user, updated after each message
+- **Clear chat history**: resets the chat UI only; stored memories in Memanto are unaffected
+- **Reset demo**: rotates to a fresh user-id namespace so the next run starts with zero visible memories (previous memories are preserved in Memanto under the prior user id)
+
+## Step-by-step CLI demo (proves persistence)
 
 ```bash
 # Session 1: Bob shares preferences. The graph stores them via MemantoStore.
@@ -119,7 +121,7 @@ python run_session_2.py
 python run_contradiction.py
 ```
 
-Or run both sessions in one process for the cleanest GIF:
+Or run both sessions in one process:
 
 ```bash
 python run_full_demo.py
@@ -132,13 +134,15 @@ examples/langgraph-memanto/
 ├── README.md                # this file
 ├── requirements.txt         # Python deps
 ├── .env.example             # API key template
+├── .gitignore               # excludes .env and venv from git
 ├── state.py                 # SupportState TypedDict (messages only)
 ├── memanto_setup.py         # Agent lifecycle helper (create + activate + teardown)
 ├── memanto_store.py         # MemantoStore(BaseStore) - the LangGraph integration
 ├── graph.py                 # build_support_graph: recall → respond → extract_and_store
+├── app.py                   # Streamlit chat UI (two sessions + live memory panel)
 ├── run_session_1.py         # Session 1: store preferences
 ├── run_session_2.py         # Session 2 (new thread): prove recall
-├── run_full_demo.py         # Both sessions back-to-back for the demo GIF
+├── run_full_demo.py         # Both sessions back-to-back
 └── run_contradiction.py     # Bonus: conflict detection + resolution
 ```
 
@@ -158,11 +162,11 @@ from memanto_store import MemantoStore
 client = MemantoSetup(api_key).setup(agent_id="my-app")
 store = MemantoStore(client, agent_id="my-app")
 
-# Compile exactly the same way — nothing else changes:
+# Compile exactly the same way, nothing else changes:
 graph = builder.compile(checkpointer=checkpointer, store=store)
 ```
 
-Your nodes use LangGraph's official store injection pattern — declare `*, store: BaseStore` and the compiled store is injected automatically:
+Your nodes use LangGraph's official store injection pattern: declare `*, store: BaseStore` and the compiled store is injected automatically:
 
 ```python
 from langgraph.store.base import BaseStore
@@ -214,15 +218,17 @@ These are documented up-front rather than papered over.
 
 ## Troubleshooting
 
-* **`MOORCHEH_API_KEY not set`** — copy `.env.example` to `.env` and fill it in.
-* **`OPENROUTER_API_KEY not set`** — the graph routes `langchain-openai` through OpenRouter. Set the env var or override the model via `LANGGRAPH_LLM` (e.g. `LANGGRAPH_LLM=openai/gpt-4o-mini`).
-* **`429 RateLimitError` from OpenRouter** — the default free model (`openai/gpt-oss-120b:free`) is subject to upstream rate limits. The graph's `RetryPolicy` handles this automatically (retries up to 5× with 32 s back-off). If retries are exhausted, set `LANGGRAPH_LLM` to a paid model or add billing credits to your OpenRouter account.
-* **`Agent 'langgraph-customer-support' already exists`** — fine. `MemantoSetup.setup` is idempotent; it reuses existing agents.
-* **No conflicts detected in `run_contradiction.py`** — Memanto's conflict detection runs during the daily-summary pass and depends on semantic similarity. The script prints a note explaining this when no conflicts surface.
+* **`MOORCHEH_API_KEY not set`**: copy `.env.example` to `.env` and fill it in.
+* **`OPENROUTER_API_KEY not set`**: the graph routes `langchain-openai` through OpenRouter. Set the env var or override the model via `LANGGRAPH_LLM` (e.g. `LANGGRAPH_LLM=openai/gpt-4o-mini`).
+* **`429 RateLimitError` from OpenRouter**: the default free model (`openai/gpt-oss-120b:free`) is subject to upstream rate limits. The graph's `RetryPolicy` handles this automatically (retries up to 5x with 32 s back-off). If retries are exhausted, set `LANGGRAPH_LLM` to a paid model or add billing credits to your OpenRouter account.
+* **`Namespace limit reached (Community plan)`**: the free tier allows 5 agents. List your agents with `client.list_agents()` and delete unused ones with `client.delete_agent(agent_id)`, or reuse an existing agent id.
+* **`Agent already exists`**: fine. `MemantoSetup.setup` catches `AgentAlreadyExistsError` and reuses the existing agent; no action needed.
+* **Streamlit `ScriptRunContext` warnings on startup**: harmless. They appear when Streamlit initialises the cached resources before the browser tab opens. The UI works normally.
+* **No conflicts detected in `run_contradiction.py`**: Memanto's conflict detection runs during the daily-summary pass and depends on semantic similarity. The script prints a note explaining this when no conflicts surface.
 
 ## See also
 
 * [Memanto documentation](https://docs.memanto.ai)
-* [`examples/crewai-memory/`](../crewai-memory/) — the CrewAI sibling demo, same 13-type memory story.
+* [`examples/crewai-memory/`](../crewai-memory/) the CrewAI sibling demo, same 13-type memory story.
 * [LangGraph: Add Memory](https://docs.langchain.com/oss/python/langgraph/add-memory)
 * [LangGraph: Store API reference](https://reference.langchain.com/python/langgraph/store)
