@@ -46,6 +46,12 @@ if _config_file.exists():
             _sum_model = _summary.get("model")
             if _sum_model:
                 os.environ["SUMMARY_MODEL"] = _sum_model
+
+            # CLI configuration
+            _cli = _memanto.get("cli", {})
+            _smart_parse = _cli.get("smart_parse")
+            if _smart_parse is not None:
+                os.environ["AUTO_PARSE_ENABLED"] = str(_smart_parse)
     except Exception:
         pass
 
