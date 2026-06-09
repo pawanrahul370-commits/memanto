@@ -2647,14 +2647,13 @@
         }
 
         async function goToConflictsForDay(key) {
+            // Seed the date input before navigation so loadConflicts()'s
+            // initial pass picks up the selected day (avoids a race where
+            // a today-scoped fetch overwrites the selected-day results).
+            const input = document.getElementById('conflictsDateInput');
+            if (input) input.value = key || todayKey();
             goToPage('conflicts');
-            // Wait for the page render + loadConflicts() initial pass, then
-            // set the date and auto-trigger detection.
-            setTimeout(async () => {
-                const input = document.getElementById('conflictsDateInput');
-                if (input) input.value = key || todayKey();
-                await detectConflictsNow();
-            }, 100);
+            await detectConflictsNow();
         }
 
         async function openHistoryForDay(key) {
@@ -3045,7 +3044,14 @@
                 return monthThis !== monthPrev ? monthNames[monthThis] : '';
             });
 
-            const headlineCount = [...byDay.values()].reduce((s, v) => s + v.length, 0);
+            // Only count memories whose day falls inside the displayed 53-week
+            // window — byDay holds the full S.history (now unbounded), so an
+            // unfiltered reduce would mislabel the "in the last year" headline.
+            const startKey = dayKey(startDate);
+            const endKey = dayKey(endDate);
+            const headlineCount = [...byDay.entries()]
+                .filter(([k]) => k >= startKey && k <= endKey)
+                .reduce((s, [, v]) => s + v.length, 0);
 
             let html = '';
             html += `<div class="hh-stats">
@@ -3689,10 +3695,10 @@
 
         // Called after any operation that mutates conflict files (detect, resolve).
         // Refreshes shared state and re-renders any visible page that depends on it.
+        // (loadConflictBadge() refreshes history itself — don't double-fetch here.)
         async function invalidateConflictState() {
             await fetchConflictScans();
-            await fetchRecentMemories();
-            loadConflictBadge();
+            await loadConflictBadge();
             if (S._historyLoaded) renderHistory();
             const conflictsPage = document.getElementById('page-conflicts');
             if (conflictsPage && conflictsPage.classList.contains('active')) {

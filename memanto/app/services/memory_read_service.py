@@ -448,13 +448,10 @@ class MemoryReadService:
         for ns in namespaces:
             next_token: str | None = None
             while True:
-                try:
-                    kwargs: dict[str, Any] = {"namespace_name": ns, "limit": 100}
-                    if next_token:
-                        kwargs["next_token"] = next_token
-                    result = self.client.documents.fetch_text_data(**kwargs)
-                except Exception:
-                    break
+                kwargs: dict[str, Any] = {"namespace_name": ns, "limit": 100}
+                if next_token:
+                    kwargs["next_token"] = next_token
+                result = self.client.documents.fetch_text_data(**kwargs)
                 if not isinstance(result, dict):
                     break
                 items.extend(result.get("items", []) or [])
