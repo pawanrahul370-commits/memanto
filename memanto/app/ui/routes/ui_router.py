@@ -974,9 +974,11 @@ async def migrate_import(body: dict):
     )
 
     client = DirectClient(api_key)
-    _, token = _config_manager.get_active_session()
+    active_agent_id, token = _config_manager.get_active_session()
     if token:
         client.session_token = token
+    if active_agent_id:
+        client.agent_id = active_agent_id
 
     started = time.perf_counter()
     try:

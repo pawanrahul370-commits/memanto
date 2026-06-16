@@ -264,10 +264,19 @@ class DirectClient:
     # Lazy initializers
 
     def _get_moorcheh(self):
-        """Return (or create) the ``MoorchehClient`` singleton."""
+        """Return (or create) the backend-aware Moorcheh client.
+
+        Dispatches to cloud ``MoorchehClient`` or on-prem ``OnPremClient`` based
+        on the active backend, mirroring ``SdkClient._get_moorcheh``. Without
+        this, on-prem callers (e.g. UI ``batch_remember`` for migrate) hit
+        cloud and get a "namespace not found" 404 for agents that only exist
+        locally.
+        """
         if self._moorcheh is None:
-            logger.debug("Initializing MoorchehClient")
-            self._moorcheh = MoorchehClient(api_key=self.api_key)
+            from memanto.app.clients.moorcheh import get_moorcheh_client
+
+            logger.debug("Initializing Moorcheh client via backend dispatcher")
+            self._moorcheh = get_moorcheh_client()
         return self._moorcheh
 
     def _get_write_service(self):
