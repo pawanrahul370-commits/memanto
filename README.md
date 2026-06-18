@@ -9,7 +9,7 @@
 </div>
 
 <p align="center">
-  Persistent memory for Claude Code, Cursor, Codex, and 14 other agents. 100% free, open source, and runs entirely on your machine - no API keys, no vector database, no backend to babysit.
+  Persistent memory for Claude Code, Cursor, Codex, and 14+ other agents, built on the world's first information-theoretic search engine. 100% free, open source, and runs entirely on your machine - no API keys, no vector database, no backend to babysit.
 </p>
 
 <h1 align="center">
