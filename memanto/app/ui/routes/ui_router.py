@@ -709,7 +709,7 @@ async def browse_path(
 
 
 @router.post("/api/ui/connections/install")
-async def connections_install(body: dict):
+async def connections_install(body: dict, _: None = Depends(_require_local)):
     """Install MEMANTO integration for one or more agents at a given location.
 
     Body: {"agents": ["claude-code", ...], "project_dir": "/abs/path", "is_global": false}
@@ -744,7 +744,7 @@ async def connections_install(body: dict):
 
 
 @router.post("/api/ui/connections/uninstall")
-async def connections_uninstall(body: dict):
+async def connections_uninstall(body: dict, _: None = Depends(_require_local)):
     """Remove MEMANTO integration for a single agent at a given location.
 
     Body: {"agent": "claude-code", "project_dir": "/abs/path", "is_global": false}
@@ -918,7 +918,7 @@ def _migrate_get_metrics_fn(provider: str):
 
 
 @router.post("/api/ui/migrate/dry-run")
-async def migrate_dry_run(body: dict):
+async def migrate_dry_run(body: dict, _: None = Depends(_require_local)):
     """Preview a migration without writing.
 
     Body: ``{provider, file?, api_key?}``. Returns the mapped row count,
@@ -976,7 +976,7 @@ async def migrate_dry_run(body: dict):
 
 
 @router.post("/api/ui/migrate/import")
-async def migrate_import(body: dict):
+async def migrate_import(body: dict, _: None = Depends(_require_local)):
     """Run an end-to-end migration.
 
     Body: ``{provider, file?, api_key?, agent_id?}``. Loads-or-exports,
