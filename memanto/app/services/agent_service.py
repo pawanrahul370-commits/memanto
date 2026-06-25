@@ -15,6 +15,7 @@ from memanto.app.config import get_data_dir
 from memanto.app.core import create_memory_scope
 from memanto.app.models.session import AgentCreate, AgentInfo, AgentList
 from memanto.app.utils.errors import AgentAlreadyExistsError, AgentNotFoundError
+from memanto.app.utils.validation import validate_safe_id
 
 
 class AgentService:
@@ -41,6 +42,7 @@ class AgentService:
 
     def _get_agent_file(self, agent_id: str) -> Path:
         """Get file path for agent metadata"""
+        validate_safe_id(agent_id, "agent_id")
         return self.agents_dir / f"{agent_id}.json"
 
     def create_agent(
