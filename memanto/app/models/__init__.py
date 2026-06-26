@@ -5,9 +5,15 @@ MEMANTO API Models
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from memanto.app.constants import MemoryType, ScopeType, SourceType, StatusType
+from memanto.app.constants import (
+    VALID_PROVENANCE_TYPES,
+    MemoryType,
+    ScopeType,
+    SourceType,
+    StatusType,
+)
 
 
 # Request Models
@@ -72,6 +78,16 @@ class BatchRememberItem(BaseModel):
         "explicit_statement",
         description="How memory was obtained (explicit_statement, inferred, observed, etc.)",
     )
+
+    @field_validator("provenance")
+    @classmethod
+    def provenance_must_be_valid(cls, value: str) -> str:
+        if value not in VALID_PROVENANCE_TYPES:
+            valid_provenance = ", ".join(sorted(VALID_PROVENANCE_TYPES))
+            raise ValueError(
+                f"Invalid provenance '{value}'. Must be one of: {valid_provenance}."
+            )
+        return value
 
 
 class RememberRequest(BatchRememberItem):
