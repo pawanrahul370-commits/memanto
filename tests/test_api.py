@@ -1179,8 +1179,6 @@ class TestCWE200ApiKeyLeak:
     Verify that the raw API key is never returned (it is completely removed).
     """
 
-    TEST_AGENT_ID = "test-cwe200-agent"
-
     @pytest.mark.asyncio
     async def test_config_endpoint_does_not_return_api_key(
         self, client, _mock_ui_config_manager
@@ -1210,6 +1208,23 @@ class TestCWE200ApiKeyLeak:
         # Session status field should be present (replaces sensitive session_token)
         assert "has_active_session" in data
         assert data["has_active_session"] is True
+
+    @pytest.mark.asyncio
+    async def test_daily_summary_rejects_traversal_agent_id(
+        self, client, tmp_path, _mock_ui_config_manager
+    ):
+        data_dir = tmp_path / "data"
+        (data_dir / "summaries").mkdir(parents=True)
+        outside = tmp_path / "outside_2026-06-27.md"
+        outside.write_text("sensitive summary outside data dir", encoding="utf-8")
+
+        with patch("memanto.app.config.get_data_dir", return_value=data_dir):
+            resp = await client.get(
+                "/api/ui/daily-summary",
+                params={"agent_id": "../../outside", "date": "2026-06-27"},
+            )
+
+        assert resp.status_code == 400
 
     @pytest.mark.asyncio
     async def test_traversal_filename_is_sanitized(

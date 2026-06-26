@@ -5,6 +5,7 @@ Serves the Web UI static files and provides UI-specific API endpoints.
 """
 
 import os
+import re
 import signal
 import time
 from pathlib import Path
@@ -28,6 +29,13 @@ _config_manager = ConfigManager()
 
 # Path to the static directory
 STATIC_DIR = Path(__file__).parent.parent / "static"
+_SAFE_AGENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+_SAFE_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _validate_summary_key(agent_id: str, date: str) -> None:
+    if not _SAFE_AGENT_ID_RE.match(agent_id) or not _SAFE_DATE_RE.match(date):
+        raise HTTPException(status_code=400, detail="Invalid summary identifier")
 
 
 def _build_ui_direct_client() -> DirectClient | None:
@@ -456,6 +464,7 @@ async def read_daily_summary(agent_id: str | None = None, date: str | None = Non
     if not date:
         date = dt.now().strftime("%Y-%m-%d")
 
+    _validate_summary_key(str(agent_id), str(date))
     path = get_data_dir() / "summaries" / f"{agent_id}_{date}.md"
     if not path.exists():
         return {
@@ -495,6 +504,7 @@ async def generate_daily_summary(body: dict | None = None):
         agent_id = aid
     date = body.get("date") or dt.now().strftime("%Y-%m-%d")
     output_path = body.get("output_path")
+    _validate_summary_key(str(agent_id), str(date))
 
     client = _build_ui_direct_client()
     if client is None:
