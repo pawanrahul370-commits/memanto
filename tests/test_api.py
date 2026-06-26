@@ -525,6 +525,31 @@ class TestMEMANTOAPI:
         assert "memory_type:fact" in call_kwargs["query"]
 
     @pytest.mark.asyncio
+    async def test_recall_rejects_invalid_type_filter(
+        self, client, auth_headers, mock_moorcheh
+    ):
+        """Invalid type filters should fail before query construction."""
+        await client.post(
+            "/api/v2/agents",
+            headers=auth_headers,
+            json={"agent_id": self.TEST_AGENT_ID},
+        )
+        activate_resp = await client.post(
+            f"/api/v2/agents/{self.TEST_AGENT_ID}/activate", headers=auth_headers
+        )
+        token = activate_resp.json()["session_token"]
+
+        headers = {**auth_headers, "X-Session-Token": token}
+        response = await client.post(
+            f"/api/v2/agents/{self.TEST_AGENT_ID}/recall",
+            headers=headers,
+            json={"query": "test query", "type": ["fact #status:deleted"]},
+        )
+
+        assert response.status_code == 422
+        mock_moorcheh.similarity_search.query.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_get_agent(self, client, auth_headers):
         """Test getting agent details"""
         await client.post(
@@ -948,6 +973,45 @@ class TestMEMANTOAPI:
         )
         assert response.status_code == 200
         assert response.json()["temporal_mode"] == "changed_since"
+
+    @pytest.mark.asyncio
+    async def test_temporal_recall_rejects_invalid_type_filters(
+        self, client, auth_headers, mock_moorcheh
+    ):
+        """Temporal recall type filters should use the same memory type contract."""
+        await client.post(
+            "/api/v2/agents",
+            headers=auth_headers,
+            json={"agent_id": self.TEST_AGENT_ID},
+        )
+        activate_resp = await client.post(
+            f"/api/v2/agents/{self.TEST_AGENT_ID}/activate", headers=auth_headers
+        )
+        token = activate_resp.json()["session_token"]
+        headers = {**auth_headers, "X-Session-Token": token}
+
+        invalid_type = "fact #status:deleted"
+        requests = [
+            (
+                f"/api/v2/agents/{self.TEST_AGENT_ID}/recall/as-of",
+                {"as_of": "2025-01-01", "type": [invalid_type]},
+            ),
+            (
+                f"/api/v2/agents/{self.TEST_AGENT_ID}/recall/changed-since",
+                {"since": "2025-01-01", "type": [invalid_type]},
+            ),
+            (
+                f"/api/v2/agents/{self.TEST_AGENT_ID}/recall/recent",
+                {"type": [invalid_type]},
+            ),
+        ]
+
+        for url, payload in requests:
+            response = await client.post(url, headers=headers, json=payload)
+            assert response.status_code == 422
+
+        mock_moorcheh.similarity_search.query.assert_not_called()
+        mock_moorcheh.documents.fetch_text_data.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_recall_recent_api(self, client, auth_headers, mock_moorcheh):

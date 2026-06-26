@@ -49,6 +49,22 @@ router = APIRouter()
 _config_manager = ConfigManager()
 
 
+def _validate_memory_type_filters(value: list[str] | None) -> list[str] | None:
+    if value is None:
+        return value
+
+    invalid = [
+        memory_type for memory_type in value if memory_type not in VALID_MEMORY_TYPES
+    ]
+    if invalid:
+        valid_types = ", ".join(sorted(VALID_MEMORY_TYPES))
+        raise ValueError(
+            f"Invalid memory type filter(s): {', '.join(invalid)}. "
+            f"Must be one of: {valid_types}."
+        )
+    return value
+
+
 class RecallRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query")
     limit: int | None = Field(default=None, ge=1, description="Max results")
@@ -56,6 +72,11 @@ class RecallRequest(BaseModel):
         default=None, ge=0.0, le=1.0, description="Minimum similarity score (0-1)"
     )
     type: list[str] | None = Field(default=None, description="Memory type filters")
+
+    @field_validator("type")
+    @classmethod
+    def type_filters_must_be_valid(cls, value: list[str] | None) -> list[str] | None:
+        return _validate_memory_type_filters(value)
 
 
 class RecallAsOfRequest(BaseModel):
@@ -65,6 +86,11 @@ class RecallAsOfRequest(BaseModel):
     )
     limit: int | None = Field(default=None, ge=1, description="Max results")
     type: list[str] | None = Field(default=None, description="Memory type filters")
+
+    @field_validator("type")
+    @classmethod
+    def type_filters_must_be_valid(cls, value: list[str] | None) -> list[str] | None:
+        return _validate_memory_type_filters(value)
 
     @field_validator("as_of", mode="before")
     @classmethod
@@ -100,6 +126,11 @@ class RecallChangedSinceRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, description="Max results")
     type: list[str] | None = Field(default=None, description="Memory type filters")
 
+    @field_validator("type")
+    @classmethod
+    def type_filters_must_be_valid(cls, value: list[str] | None) -> list[str] | None:
+        return _validate_memory_type_filters(value)
+
     @field_validator("since", mode="before")
     @classmethod
     def parse_since(cls, v: object) -> datetime:
@@ -129,6 +160,11 @@ class RecallChangedSinceRequest(BaseModel):
 class RecallRecentRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, description="Max results")
     type: list[str] | None = Field(default=None, description="Memory type filters")
+
+    @field_validator("type")
+    @classmethod
+    def type_filters_must_be_valid(cls, value: list[str] | None) -> list[str] | None:
+        return _validate_memory_type_filters(value)
 
 
 class MemoryEditRequest(BaseModel):
