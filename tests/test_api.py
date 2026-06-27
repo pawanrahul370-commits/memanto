@@ -1270,6 +1270,76 @@ class TestCWE200ApiKeyLeak:
         )
 
     @pytest.mark.asyncio
+    async def test_conflicts_list_rejects_traversal_agent_id(
+        self, client, _mock_ui_config_manager
+    ):
+        mock_direct_client = MagicMock()
+
+        with patch(
+            "memanto.app.ui.routes.ui_router._build_ui_direct_client",
+            return_value=mock_direct_client,
+        ):
+            resp = await client.get(
+                "/api/ui/conflicts",
+                params={"agent_id": "../../outside", "date": "2026-06-27"},
+            )
+
+        assert resp.status_code == 400
+        mock_direct_client.list_conflicts.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_conflict_scans_rejects_glob_agent_id(
+        self, client, _mock_ui_config_manager
+    ):
+        resp = await client.get(
+            "/api/ui/conflict-scans",
+            params={"agent_id": "agent-*"},
+        )
+
+        assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_generate_conflict_report_rejects_traversal_date(
+        self, client, _mock_ui_config_manager
+    ):
+        mock_direct_client = MagicMock()
+
+        with patch(
+            "memanto.app.ui.routes.ui_router._build_ui_direct_client",
+            return_value=mock_direct_client,
+        ):
+            resp = await client.post(
+                "/api/ui/conflicts/generate",
+                json={"agent_id": "agent-1", "date": "../../outside"},
+            )
+
+        assert resp.status_code == 400
+        mock_direct_client.generate_conflict_report.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_resolve_conflict_rejects_traversal_agent_id(
+        self, client, _mock_ui_config_manager
+    ):
+        mock_direct_client = MagicMock()
+
+        with patch(
+            "memanto.app.ui.routes.ui_router._build_ui_direct_client",
+            return_value=mock_direct_client,
+        ):
+            resp = await client.post(
+                "/api/ui/conflicts/resolve",
+                json={
+                    "agent_id": "../../outside",
+                    "date": "2026-06-27",
+                    "conflict_index": 0,
+                    "action": "keep_new",
+                },
+            )
+
+        assert resp.status_code == 400
+        mock_direct_client.resolve_conflict.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_traversal_filename_is_sanitized(
         self, client, auth_headers, mock_moorcheh
     ):
