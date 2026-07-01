@@ -250,20 +250,10 @@ async def deactivate_agent(
         )
 
     try:
-        # Snapshot namespace document count before and after ending the session
-        # so end_session() receives an accurate memories_created value.
-        # _namespace_item_counts is best-effort; returns {} if Moorcheh is
-        # unreachable, so the count safely falls back to 0.
-        counts_before = await _namespace_item_counts(_server_api_key)
-        count_before = counts_before.get(session.namespace, 0)
-
-        counts_after = await _namespace_item_counts(_server_api_key)
-        count_after = counts_after.get(session.namespace, 0)
-        memories_created = max(0, count_after - count_before)
-
-        summary = get_session_service().end_session(
-            agent_id, memories_created=memories_created
-        )
+        # end_session_async() fetches the live Moorcheh namespace count and
+        # injects it as memories_created — logic owned by the service so all
+        # callers (HTTP + future CLI) get accurate counts.
+        summary = await get_session_service().end_session_async(agent_id)
         return summary
     except SessionNotFoundError as e:
         raise map_error_to_http_exception(e)

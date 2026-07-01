@@ -266,6 +266,35 @@ class SessionService:
             memories_created=memories_created,
         )
 
+    async def end_session_async(self, agent_id: str) -> "SessionSummary":
+        """End session and populate memories_created from live Moorcheh count.
+
+        Preferred over end_session() for HTTP callers that have async context.
+        The CLI uses end_session() directly and receives memories_created=0
+        (documented limitation — async namespace lookup is not available there).
+        """
+        import asyncio
+
+        from memanto.app.clients import moorcheh as _moorcheh
+
+        session = self.get_session(agent_id)
+        if not session:
+            raise SessionNotFoundError(f"No session found for agent {agent_id}")
+
+        try:
+            client = _moorcheh.get_moorcheh_client()
+            ns_resp = await asyncio.to_thread(client.namespaces.list)
+            counts: dict[str, int] = {
+                ns["namespace_name"]: ns.get("item_count", 0)
+                for ns in ns_resp.get("namespaces", [])
+                if ns.get("namespace_name")
+            }
+            memories_created = counts.get(session.namespace, 0)
+        except Exception:
+            memories_created = 0
+
+        return self.end_session(agent_id, memories_created=memories_created)
+
     def renew_session(
         self,
         agent_id: str,
