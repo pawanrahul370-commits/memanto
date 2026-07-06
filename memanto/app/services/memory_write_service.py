@@ -204,7 +204,7 @@ class MemoryWriteService:
                 for r in results
                 if str(r["status"]).lower() in SUCCESSFUL_UPLOAD_STATUSES
             )
-            failed = sum(1 for r in results if r["status"] == "failed")
+            failed = sum(1 for r in results if str(r["status"]).lower() == "failed")
 
             return {
                 "total_submitted": len(memories),
