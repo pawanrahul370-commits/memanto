@@ -360,7 +360,9 @@ export class Memanto {
   }
 
   async status() {
-    return this.request("GET", `/api/v2/status`);
+    return this.request("GET", `/api/v2/status`, undefined, {
+      requireSession: false,
+    });
   }
 
   // ---------------------------------------------------------------------------
