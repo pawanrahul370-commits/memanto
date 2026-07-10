@@ -808,7 +808,7 @@ async def answer(
         if request.temperature is not None
         else settings.ANSWER_TEMPERATURE
     )
-    ai_model = (
+    resolved_ai_model = (
         request.ai_model
         if request.ai_model is not None
         else get_active_llm_model(settings.ANSWER_MODEL)
@@ -839,11 +839,12 @@ async def answer(
             "query": request.question,
             "top_k": limit,
             "temperature": temperature,
-            "ai_model": ai_model,
             "kiosk_mode": request.kiosk_mode,
             "header_prompt": header_prompt,
             "footer_prompt": footer_prompt,
         }
+        if resolved_ai_model is not None:
+            generate_kwargs["ai_model"] = resolved_ai_model
         if request.kiosk_mode:
             generate_kwargs["threshold"] = (
                 request.threshold if request.threshold is not None else 0.15

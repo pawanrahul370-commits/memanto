@@ -383,6 +383,38 @@ class TestMEMANTOAPI:
         assert "threshold" not in call_kwargs
 
     @pytest.mark.asyncio
+    async def test_answer_omits_unset_active_ai_model(
+        self, client, auth_headers, mock_moorcheh
+    ):
+        """On-prem fallback should omit ai_model instead of sending None."""
+        await client.post(
+            "/api/v2/agents",
+            headers=auth_headers,
+            json={"agent_id": self.TEST_AGENT_ID},
+        )
+        activate_resp = await client.post(
+            f"/api/v2/agents/{self.TEST_AGENT_ID}/activate", headers=auth_headers
+        )
+        token = activate_resp.json()["session_token"]
+
+        mock_moorcheh.answer.generate.return_value = {
+            "answer": "This is a mocked answer",
+            "sources": [],
+        }
+
+        headers = {**auth_headers, "X-Session-Token": token}
+        with patch("memanto.app.routes.memory.get_active_llm_model", return_value=None):
+            response = await client.post(
+                f"/api/v2/agents/{self.TEST_AGENT_ID}/answer",
+                headers=headers,
+                json={"question": "What is being tested?"},
+            )
+
+        assert response.status_code == 200
+        call_kwargs = mock_moorcheh.answer.generate.call_args.kwargs
+        assert "ai_model" not in call_kwargs
+
+    @pytest.mark.asyncio
     async def test_answer_with_kiosk_mode_uses_default_threshold(
         self, client, auth_headers, mock_moorcheh
     ):
