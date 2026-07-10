@@ -463,6 +463,58 @@ class TestMemoryReadServiceFormatting:
         assert formatted["tags"] == []
 
 
+class TestMemoryWriteServiceBatch:
+    def test_batch_store_counts_ok_upload_status_as_success(self):
+        from memanto.app.core import MemoryRecord
+        from memanto.app.services.memory_write_service import MemoryWriteService
+
+        client = MagicMock()
+        client.documents.upload.return_value = {"status": "ok"}
+        memories = [
+            MemoryRecord(
+                title="First preference",
+                content="Alex prefers concise status updates.",
+                agent_id="agent-1",
+                actor_id="user-1",
+                source="test",
+            ),
+            MemoryRecord(
+                title="Second preference",
+                content="Alex prefers weekly summaries.",
+                agent_id="agent-1",
+                actor_id="user-1",
+                source="test",
+            ),
+        ]
+
+        result = MemoryWriteService(client).batch_store_memories(memories)
+
+        assert result["successful"] == 2
+        assert result["failed"] == 0
+        assert [item["status"] for item in result["results"]] == ["ok", "ok"]
+
+    def test_batch_store_counts_failed_upload_status_case_insensitively(self):
+        from memanto.app.core import MemoryRecord
+        from memanto.app.services.memory_write_service import MemoryWriteService
+
+        client = MagicMock()
+        client.documents.upload.return_value = {"status": "FAILED"}
+        memories = [
+            MemoryRecord(
+                title="Failed write",
+                content="This write should be counted as failed.",
+                agent_id="agent-1",
+                actor_id="user-1",
+                source="test",
+            )
+        ]
+
+        result = MemoryWriteService(client).batch_store_memories(memories)
+
+        assert result["successful"] == 0
+        assert result["failed"] == 1
+
+
 class TestForgetEndToEnd:
     """End-to-end ``forget`` flow through ``DirectClient``: create agent →
     activate → delete_memory. Asserts on-prem's response shape
