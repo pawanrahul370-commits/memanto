@@ -1542,9 +1542,13 @@ class SdkClient:
             total = len(load_okf_bundle(cache)["memories"])
             source = "stale-cache"
 
+        tmp = target.with_suffix(".okf.tmp")
+        if tmp.exists():
+            shutil.rmtree(tmp)
+        shutil.copytree(src, tmp)
         if target.exists():
             shutil.rmtree(target)
-        shutil.copytree(src, target)
+        tmp.rename(target)
 
         return {
             "output_path": str(target.resolve()),
