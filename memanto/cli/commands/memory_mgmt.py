@@ -262,9 +262,7 @@ def memory_sync(
         if total == 0:
             console.print("\n[yellow]No memories found for this agent.[/yellow]")
         else:
-            console.print(
-                f"\n[green]OK Synced {total} memories to OKF bundle![/green]"
-            )
+            console.print(f"\n[green]OK Synced {total} memories to OKF bundle![/green]")
             console.print(f"[dim]Source: {source_label}[/dim]")
 
         if source == "stale-cache":

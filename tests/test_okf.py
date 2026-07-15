@@ -14,7 +14,13 @@ from memanto.cli.migrate.okf_loader import load_okf_bundle
 
 
 def _mem(mem_id, title, content, **extra):
-    base = {"id": mem_id, "title": title, "content": content, "tags": [], "confidence": 0.8}
+    base = {
+        "id": mem_id,
+        "title": title,
+        "content": content,
+        "tags": [],
+        "confidence": 0.8,
+    }
     base.update(extra)
     return base
 
@@ -32,7 +38,9 @@ def test_auto_split_layout(tmp_path):
     }
 
     svc = OkfExportService(exports_dir=tmp_path / "exports")
-    result = svc.write_okf_bundle("agent1", memories_by_type, split="auto", threshold=50)
+    result = svc.write_okf_bundle(
+        "agent1", memories_by_type, split="auto", threshold=50
+    )
     base = svc.exports_dir / "agent1_okf"
     memories = base / "memories"
 
@@ -72,7 +80,12 @@ def test_context_sections_and_import_scope(tmp_path):
     )
     base = svc.exports_dir / "agent1_okf"
 
-    assert set(result["sections"]) == {"memories", "daily-summaries", "sessions", "metrics"}
+    assert set(result["sections"]) == {
+        "memories",
+        "daily-summaries",
+        "sessions",
+        "metrics",
+    }
     assert (base / "daily-summaries" / "agent1_2026-07-01.md").exists()
     assert (base / "sessions" / "agent1_2026-07-01_s1_summary.md").exists()
 
@@ -161,11 +174,15 @@ def test_foreign_okf_bundle_is_lossless(tmp_path):
 def test_loader_splits_stacked_file(tmp_path):
     """A stacked per-type file is split back into one entry per memory."""
     memories_by_type = {
-        "event": [_mem(f"e{i}", f"Standup {i}", f"Standup {i} happened.") for i in range(5)]
+        "event": [
+            _mem(f"e{i}", f"Standup {i}", f"Standup {i} happened.") for i in range(5)
+        ]
     }
     svc = OkfExportService(exports_dir=tmp_path / "exports")
     result = svc.write_okf_bundle("agent1", memories_by_type, split="type")
 
     export = load_okf_bundle(result["output_path"])
     assert len(export["memories"]) == 5
-    assert {m["title"] for m in export["memories"]} == {f"Standup {i}" for i in range(5)}
+    assert {m["title"] for m in export["memories"]} == {
+        f"Standup {i}" for i in range(5)
+    }

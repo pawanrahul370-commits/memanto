@@ -76,9 +76,7 @@ def load_okf_bundle(path: str | Path) -> dict[str, Any]:
     return {"memories": memories}
 
 
-def _parse_entry(
-    chunk: str, file_path: Path, rel_base: Path
-) -> dict[str, Any] | None:
+def _parse_entry(chunk: str, file_path: Path, rel_base: Path) -> dict[str, Any] | None:
     """Parse one OKF document (frontmatter + body) into an entry dict."""
     match = _FRONTMATTER_RE.match(chunk)
     if match:
