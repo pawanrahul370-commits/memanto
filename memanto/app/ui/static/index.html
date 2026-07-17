@@ -3017,14 +3017,14 @@
                     const agent = await api('GET', `/api/v2/agents/${S.agentId}`);
                     profile.innerHTML = `
                 <table class="config-table"><tbody>
-                <tr><td>Agent ID</td><td><strong style="color:var(--accent)">${agent.agent_id}</strong></td></tr>
-                <tr><td>Pattern</td><td><span class="badge badge-accent">${agent.pattern || '—'}</span></td></tr>
-                <tr><td>Description</td><td>${agent.description || '—'}</td></tr>
-                <tr><td>Namespace</td><td><code style="color:var(--cyan);font-family:var(--font-mono)">${agent.namespace || '—'}</code></td></tr>
+                <tr><td>Agent ID</td><td><strong style="color:var(--accent)">${escHtml(agent.agent_id)}</strong></td></tr>
+                <tr><td>Pattern</td><td><span class="badge badge-accent">${escHtml(agent.pattern || '—')}</span></td></tr>
+                <tr><td>Description</td><td>${escHtml(agent.description || '—')}</td></tr>
+                <tr><td>Namespace</td><td><code style="color:var(--cyan);font-family:var(--font-mono)">${escHtml(agent.namespace || '—')}</code></td></tr>
                 <tr><td>Created</td><td>${fmtDate(agent.created_at)}</td></tr>
                 <tr><td>Sessions</td><td>${agent.session_count ?? '—'}</td></tr>
                 </tbody></table>`;
-                } catch (e) { profile.innerHTML = `<p style="color:var(--text-dim)">Could not load agent: ${e.message}</p>`; }
+                } catch (e) { profile.innerHTML = `<p style="color:var(--text-dim)">Could not load agent: ${escHtml(e.message)}</p>`; }
             } else {
                 profile.innerHTML = '<p style="color:var(--text-dim)">No active agent. <a href="#" onclick="goToPage(\'agents\');return false" style="color:var(--accent);text-decoration:none">Go to the Agents page</a> to activate one.</p>';
             }
@@ -3036,14 +3036,14 @@
                     const mins = Math.floor(((sess.time_remaining_seconds || 0) % 3600) / 60);
                     session.innerHTML = `
                 <table class="config-table"><tbody>
-                <tr><td>Status</td><td><span class="badge badge-success">${sess.status || 'active'}</span></td></tr>
-                <tr><td>Pattern</td><td>${sess.pattern || '—'}</td></tr>
-                <tr><td>Namespace</td><td><code style="color:var(--cyan);font-family:var(--font-mono)">${sess.namespace || '—'}</code></td></tr>
+                <tr><td>Status</td><td><span class="badge badge-success">${escHtml(sess.status || 'active')}</span></td></tr>
+                <tr><td>Pattern</td><td>${escHtml(sess.pattern || '—')}</td></tr>
+                <tr><td>Namespace</td><td><code style="color:var(--cyan);font-family:var(--font-mono)">${escHtml(sess.namespace || '—')}</code></td></tr>
                 <tr><td>Started</td><td>${fmtDate(sess.started_at)}</td></tr>
                 <tr><td>Expires</td><td>${fmtDate(sess.expires_at)}</td></tr>
                 <tr><td>Time Remaining</td><td><strong style="color:var(--accent)">${hrs}h ${mins}m</strong></td></tr>
                 </tbody></table>`;
-                } catch (e) { session.innerHTML = `<p style="color:var(--warning)">Session may be expired: ${e.message}</p>`; }
+                } catch (e) { session.innerHTML = `<p style="color:var(--warning)">Session may be expired: ${escHtml(e.message)}</p>`; }
             } else {
                 session.innerHTML = '<p style="color:var(--text-dim)">No active session</p>';
             }
@@ -3158,7 +3158,7 @@
                 document.getElementById('answerLoading').remove();
                 let sourcesHtml = '';
                 if (res.sources && res.sources.length) {
-                    sourcesHtml = `<div class="chat-sources">Sources: ${res.sources.map(s => `<span class="badge badge-info" style="margin:2px">${trunc(s.title || s.id || 'memory', 30)}</span>`).join('')}</div>`;
+                    sourcesHtml = `<div class="chat-sources">Sources: ${res.sources.map(s => `<span class="badge badge-info" style="margin:2px">${escHtml(trunc(s.title || s.id || 'memory', 30))}</span>`).join('')}</div>`;
                 }
                 msgs.innerHTML += `<div class="chat-msg assistant">${escHtml(res.answer || 'No answer generated.')}${sourcesHtml}</div>`;
             } catch (e) {
@@ -3187,7 +3187,7 @@
                 const mems = res.memories || [];
                 if (!mems.length) { box.innerHTML = '<p style="color:var(--text-dim);padding:20px">No memories found</p>'; return; }
                 box.innerHTML = buildMemoryTable(mems, true);
-            } catch (e) { box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${e.message}</p>`; }
+            } catch (e) { box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${escHtml(e.message)}</p>`; }
         }
 
         // ================================================================
@@ -3370,7 +3370,7 @@
                 S.explorerAll = res.memories || [];
                 populateSourceFilter(S.explorerAll);
                 renderExplorer();
-            } catch (e) { box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${e.message}</p>`; }
+            } catch (e) { box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${escHtml(e.message)}</p>`; }
         }
 
         // Populate the source dropdown from the distinct sources present in the data,
@@ -3413,12 +3413,12 @@
                 const tags = Array.isArray(m.tags) ? m.tags.filter(t => t).join(', ') : (m.tags || '');
                 const statusBadge = m.status === 'active' ? '<span class="badge badge-success">active</span>' :
                     m.status === 'superseded' ? '<span class="badge badge-warning">superseded</span>' :
-                        `<span class="badge badge-info">${m.status || '—'}</span>`;
-                const provBadge = m.provenance ? `<span class="badge badge-accent">${m.provenance}</span>` : '—';
+                        `<span class="badge badge-info">${escHtml(m.status || '—')}</span>`;
+                const provBadge = m.provenance ? `<span class="badge badge-accent">${escHtml(m.provenance)}</span>` : '—';
                 const mJson = attrEsc(JSON.stringify(m));
                 html += `<tr class="${expandable ? 'expandable' : ''}" onclick="toggleRow('exp-${i}')">
             <td style="color:var(--text-primary);font-weight:500">${escHtml(trunc(m.title || 'Untitled', 60))}</td>
-            <td><span class="badge badge-info">${m.type || '—'}</span></td>
+            <td><span class="badge badge-info">${escHtml(m.type || '—')}</span></td>
             <td>${m.source ? `<span class="badge badge-accent">${escHtml(m.source)}</span>` : '—'}</td>
             <td>${confBadge(m.confidence)}</td>
             <td>${statusBadge}</td>
@@ -3432,9 +3432,9 @@
                         ? `<button class="btn btn-secondary btn-sm" style="margin-right: 8px;" data-mem="${mJson}" onclick="openEditMemoryModal(JSON.parse(this.dataset.mem))">Edit</button>`
                         : '';
                     const forgetBtn = memId
-                        ? `<button class="btn btn-danger btn-sm" onclick="forgetMemory('${escHtml(memId)}', this, event)">Forget</button>`
+                        ? `<button class="btn btn-danger btn-sm" data-memory-id="${attrEsc(memId)}" onclick="forgetMemory(this.dataset.memoryId, this, event)">Forget</button>`
                         : '<span style="font-size:11px;color:var(--text-dim)">No ID — cannot forget</span>';
-                    html += `<tr class="expand-row" id="exp-${i}"><td colspan="8"><div class="expand-content">${escHtml(m.content || m.text || 'No content')}\n\nID: ${memId || '—'}\nScore: ${m.score ?? '—'}\nSource: ${m.source || '—'}\nUpdated: ${fmtDate(m.updated_at)}</div><div style="padding:8px 16px;display:flex;justify-content:flex-end">${editBtn}${forgetBtn}</div></td></tr>`;
+                    html += `<tr class="expand-row" id="exp-${i}"><td colspan="8"><div class="expand-content">${escHtml(m.content || m.text || 'No content')}\n\nID: ${escHtml(memId || '—')}\nScore: ${escHtml(String(m.score ?? '—'))}\nSource: ${escHtml(m.source || '—')}\nUpdated: ${escHtml(fmtDate(m.updated_at))}</div><div style="padding:8px 16px;display:flex;justify-content:flex-end">${editBtn}${forgetBtn}</div></td></tr>`;
                 }
             });
             html += '</tbody></table>';
@@ -3641,7 +3641,7 @@
                 // navigated here with a specific day pre-selected).
                 renderHistory();
             } catch (e) {
-                box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${e.message}</p>`;
+                box.innerHTML = `<p style="color:var(--error);padding:20px">Error: ${escHtml(e.message)}</p>`;
             }
         }
 
@@ -4152,7 +4152,7 @@
                 });
 
             } catch (e) {
-                document.getElementById('configContent').innerHTML = `<p style="color:var(--error)">Failed to load config: ${e.message}</p>`;
+                document.getElementById('configContent').innerHTML = `<p style="color:var(--error)">Failed to load config: ${escHtml(e.message)}</p>`;
             }
         }
 
@@ -4674,7 +4674,7 @@
                     tagsContainer.innerHTML = cloudHtml;
                 }
             } catch (e) {
-                cards.innerHTML = `<p style="color:var(--error);padding:20px">Failed to load analytics: ${e.message}</p>`;
+                cards.innerHTML = `<p style="color:var(--error);padding:20px">Failed to load analytics: ${escHtml(e.message)}</p>`;
             }
         }
         // ================================================================
